@@ -18,25 +18,25 @@ void mpu6050_task(void * pvParameters){
 	mpu6050_show_config(MPU6050_ADDR0);
 	vTaskDelay(3000 / portTICK_RATE_MS);
 	
+	int16_t offset[7];
+	mpu6050_offsets_init(MPU6050_ADDR0);
+	mpu6050_get_offsets(MPU6050_ADDR0, offset);
+	printf("AccelOffs(X Y Z): %d %d %d\n", offset[0], offset[1], offset[2]);
+	printf("GyroOffs(X Y Z): %d %d %d\n", offset[4], offset[5], offset[6]);
+	printf("tempOffs: %d\n", offset[3]);
+	
 	for(;;){
-		uint8_t len = 12;
-		uint8_t data_temp[len];
-		int16_t data_raw[len/2];
-		//volatile int64_t time;
+		int16_t data[7];
 		
-		//time = (volatile int64_t)esp_timer_get_time();
-		mpu6050_read(MPU6050_ADDR0, RACCEL_XOUT_H, data_temp, len/2);
-		mpu6050_read(MPU6050_ADDR0, RGYRO_XOUT_H, (data_temp + len/2), len/2);
-		
-		//printf("time for reads: %ld us\n", (volatile long) (esp_timer_get_time() - time));
-		
-		for(uint8_t i = 0; i < len - 1; i += 2)
-			data_raw[i/2] = (data_temp[i] << 8) | data_temp[i + 1];
+		mpu6050_read_sensors(MPU6050_ADDR0, data, 1);
 			
-		printf("AccelRaw: X%d Y%d Z%d\n", data_raw[0], data_raw[1], data_raw[2]);
-		printf("GyroRaw: X%d Y%d Z%d\n", data_raw[3], data_raw[4], data_raw[5]);
+		printf("Accel(X Y Z): %d %d %d\n", data[0], data[1], data[2]);
+		printf("Gyro(X Y Z): %d %d %d\n", data[4], data[5], data[6]);
+		printf("tempRaws: %d\n", data[3]);
 		
-		//vTaskDelay(200 / portTICK_RATE_MS);
+		
+		
+		vTaskDelay(500 / portTICK_RATE_MS);
 	}
 }
 
