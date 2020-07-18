@@ -41,9 +41,9 @@ void mpu6050_sync_default_init(mpu6050_addr_t addr){
 	 uint8_t reg_value = 0;
 		
 	//it needs the delays to work
-	reg_value = 0x80; //reset the mpu
+	reg_value = 0x80; //reset the mpu, it requires 100 ms
 	mpu6050_write_byte(addr, RPWR_MGMT_1, &reg_value);
-	vTaskDelay(20 / portTICK_RATE_MS);
+	vTaskDelay(100 / portTICK_RATE_MS);
 	
 	reg_value = 0x01; //wake up the mpu and set clk_sel
 	mpu6050_write_byte(addr, RPWR_MGMT_1, &reg_value);
