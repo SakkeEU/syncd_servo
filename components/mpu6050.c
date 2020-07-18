@@ -5,6 +5,11 @@
 //#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #include "esp_log.h"
 
+//TODO: find a better solution
+static int16_t addr0_offset[7] = {0};
+static int16_t addr1_offset[7] = {0};
+
+//TODO: add parameters for customization
 esp_err_t mpu6050_i2c_init(){
 	
 	esp_err_t err;
@@ -40,6 +45,10 @@ void mpu6050_sync_default_init(mpu6050_addr_t addr){
 	reg_value = 0x80; //reset the mpu, it requires 100 ms
 	mpu6050_write_byte(addr, RPWR_MGMT_1, &reg_value);
 	vTaskDelay(100 / portTICK_RATE_MS);
+	
+	reg_value = 0x01; //wake up the mpu and set clk_sel
+	mpu6050_write_byte(addr, RPWR_MGMT_1, &reg_value);
+	vTaskDelay(100 / portTICK_RATE_MS);
 		
 	reg_value = 0x01; //set sample rate divider
 	mpu6050_write_byte(addr, RSMPLRT_DIV, &reg_value);
@@ -48,10 +57,6 @@ void mpu6050_sync_default_init(mpu6050_addr_t addr){
 	reg_value = 0x01; //set Digital low Pass Filter
 	mpu6050_write_byte(addr, RCONFIG, &reg_value);
 	vTaskDelay(20 / portTICK_RATE_MS);
-	
-	reg_value = 0x01; //wake up the mpu and set clk_sel
-	mpu6050_write_byte(addr, RPWR_MGMT_1, &reg_value);
-	vTaskDelay(100 / portTICK_RATE_MS);
 }
 
 esp_err_t mpu6050_write_byte(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data){
@@ -111,7 +116,7 @@ esp_err_t mpu6050_read_byte(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * da
 }
 
 //burst read mode
-esp_err_t mpu6050_read(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data, uint8_t data_len){
+esp_err_t mpu6050_read_burst(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data, uint8_t data_len){
 	
 	esp_err_t err;
 	err = mpu6050_write_static(addr, reg);
@@ -132,6 +137,81 @@ esp_err_t mpu6050_read(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data, u
 	i2c_cmd_link_delete(handle);
 	
 	return err;
+}
+
+//calculate the bitwise OR of the values of the 2 registers dedicated
+//to each measurement.
+//data length > 7 needed.
+esp_err_t mpu6050_read_sensors(mpu6050_addr_t addr, int16_t * data, uint8_t with_offset){
+	
+	esp_err_t err;
+	uint8_t i;
+	uint8_t len = 14; //number of internal sensors registers
+	uint8_t data_temp[len];
+	err = mpu6050_read_burst(addr, RACCEL_XOUT_H, data_temp, len);
+	if(err != 0)
+		return err;
+	
+	for(i = 0; i < len - 1; i += 2)
+			data[i/2] = (data_temp[i] << 8) | data_temp[i + 1];
+			
+	if(with_offset){
+		if(addr == MPU6050_ADDR0){
+			for(i = 0; i < len/2; i++)
+				data[i] -= addr0_offset[i];
+		}else{
+			for(i = 0; i < len/2; i++)
+				data[i] -= addr0_offset[i];
+		}
+	}
+			
+	return err;
+}
+
+void mpu6050_offsets_init(mpu6050_addr_t addr){
+	
+	int32_t loops = 1600;
+	int32_t wasted_loops = 100;
+	int32_t accel_sens = 16384;
+	int16_t readings[7] = {0};
+	int32_t sums[7] = {0}; // INVESTIGATE: this variable keeps its value between calls if not zeroed
+	
+	for(uint16_t i = 0; i < loops; i++){
+		
+		mpu6050_read_sensors(addr, readings, 0);
+		if(i < wasted_loops){
+			continue;
+		}else{
+			sums[0] += (int32_t)readings[0];
+			sums[1] += (int32_t)readings[1];
+			sums[2] += ((int32_t)readings[2]) - accel_sens;
+			sums[4] += (int32_t)readings[4];
+			sums[5] += (int32_t)readings[5];
+			sums[6] += (int32_t)readings[6];
+		}
+	}
+	if(addr == MPU6050_ADDR0){
+		for(uint8_t i = 0; i < 7; i++){
+			if(i == 3) continue;
+			addr0_offset[i] = (int16_t)(sums[i]/(loops - wasted_loops));
+		}
+	}else{
+		for(uint8_t i = 0; i < 7; i++){
+			if(i == 3) continue;
+			addr1_offset[i] = (int16_t)(sums[i]/(loops - wasted_loops));
+		}
+	}
+}
+
+void mpu6050_get_offsets(mpu6050_addr_t addr, int16_t * offset){
+	
+	if(addr == MPU6050_ADDR0){
+		for(uint8_t i = 0; i < 7; i++)
+			offset[i] = addr0_offset[i];
+	}else{
+		for(uint8_t i = 0; i < 7; i++)
+			offset[i] = addr0_offset[i];
+	}
 }
 
 //print the value of some register
