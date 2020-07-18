@@ -13,12 +13,6 @@
 #define WRITE(mpu6050_addr)		((mpu6050_addr << 1) | 0)
 #define READ(mpu6050_addr)		((mpu6050_addr << 1) | 1)
 
-//flag used to see if i2c is initialized
-typedef enum{
-	NOT_READY,
-	READY
-}i2c_ready_t;
-
 typedef enum{
 	MPU6050_ADDR0	= 0x68,
 	MPU6050_ADDR1

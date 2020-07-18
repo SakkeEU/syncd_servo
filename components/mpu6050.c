@@ -5,8 +5,6 @@
 //#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #include "esp_log.h"
 
-static i2c_ready_t i2c_ready = NOT_READY;
-
 esp_err_t mpu6050_i2c_init(){
 	
 	esp_err_t err;
@@ -26,13 +24,11 @@ esp_err_t mpu6050_i2c_init(){
     err = i2c_param_config(I2C_NUM_0, &cfg);
 	ESP_LOGD(MPU6050_TAG, "config %s:%d", ((err == 0) ? "succeeded" : "failed"), err);
 	
-	i2c_ready = READY;
 	return err;
 }
 
 void mpu6050_i2c_deinit(){
 	i2c_driver_delete(I2C_NUM_0);
-	i2c_ready = NOT_READY;
 }
 
 //set some register value for the mpu6050
@@ -44,17 +40,18 @@ void mpu6050_sync_default_init(mpu6050_addr_t addr){
 	reg_value = 0x80; //reset the mpu, it requires 100 ms
 	mpu6050_write_byte(addr, RPWR_MGMT_1, &reg_value);
 	vTaskDelay(100 / portTICK_RATE_MS);
-	
-	reg_value = 0x01; //wake up the mpu and set clk_sel
-	mpu6050_write_byte(addr, RPWR_MGMT_1, &reg_value);
-	vTaskDelay(20 / portTICK_RATE_MS);
-	
-	reg_value = 0x00; //set sample rate divider
+		
+	reg_value = 0x01; //set sample rate divider
 	mpu6050_write_byte(addr, RSMPLRT_DIV, &reg_value);
 	vTaskDelay(20 / portTICK_RATE_MS);
 	
 	reg_value = 0x01; //set Digital low Pass Filter
 	mpu6050_write_byte(addr, RCONFIG, &reg_value);
+	vTaskDelay(20 / portTICK_RATE_MS);
+	
+	reg_value = 0x01; //wake up the mpu and set clk_sel
+	mpu6050_write_byte(addr, RPWR_MGMT_1, &reg_value);
+	vTaskDelay(100 / portTICK_RATE_MS);
 }
 
 esp_err_t mpu6050_write_byte(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data){
