@@ -61,6 +61,7 @@ esp_err_t mpu6050_read_burst(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * d
 esp_err_t mpu6050_read_sensors(mpu6050_addr_t addr, int16_t * data, uint8_t with_offset);
 void mpu6050_offsets_init(mpu6050_addr_t addr);
 void mpu6050_get_offsets(mpu6050_addr_t addr, int16_t * offset);
+void mpu6050_get_offsets_8bit(mpu6050_addr_t addr, uint8_t * offset);
 void mpu6050_show_config(mpu6050_addr_t addr);
 
 #endif  

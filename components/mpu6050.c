@@ -139,22 +139,22 @@ esp_err_t mpu6050_read_burst(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * d
 	return err;
 }
 
-//calculate the bitwise OR of the values of the 2 registers dedicated
-//to each measurement.
-//data length > 7 needed.
+//calculate the bitwise OR of the 2 registers dedicated to each measurement
+//to get the raw complete measure. data length > 7 needed.
 esp_err_t mpu6050_read_sensors(mpu6050_addr_t addr, int16_t * data, uint8_t with_offset){
 	
 	esp_err_t err;
 	uint8_t i;
 	uint8_t len = 14; //number of internal sensors registers
 	uint8_t data_temp[len];
+	for(i = 0; i <= 14; i++)
+		data_temp[i] = 0;
 	err = mpu6050_read_burst(addr, RACCEL_XOUT_H, data_temp, len);
 	if(err != 0)
 		return err;
 	
 	for(i = 0; i < len - 1; i += 2)
-			data[i/2] = (data_temp[i] << 8) | data_temp[i + 1];
-			
+			data[i/2] = (data_temp[i] << 8) | data_temp[i + 1];	
 	if(with_offset){
 		if(addr == MPU6050_ADDR0){
 			for(i = 0; i < len/2; i++)
@@ -163,8 +163,7 @@ esp_err_t mpu6050_read_sensors(mpu6050_addr_t addr, int16_t * data, uint8_t with
 			for(i = 0; i < len/2; i++)
 				data[i] -= addr0_offset[i];
 		}
-	}
-			
+	}	
 	return err;
 }
 
@@ -174,7 +173,7 @@ void mpu6050_offsets_init(mpu6050_addr_t addr){
 	int32_t wasted_loops = 100;
 	int32_t accel_sens = 16384;
 	int16_t readings[7] = {0};
-	int32_t sums[7] = {0}; // INVESTIGATE: this variable keeps its value between calls if not zeroed
+	int32_t sums[7] = {0};
 	
 	for(uint16_t i = 0; i < loops; i++){
 		
@@ -211,6 +210,22 @@ void mpu6050_get_offsets(mpu6050_addr_t addr, int16_t * offset){
 	}else{
 		for(uint8_t i = 0; i < 7; i++)
 			offset[i] = addr0_offset[i];
+	}
+}
+
+//offsets are loaded into an array as high_byte[i] low_byte[i + 1] etc.
+void mpu6050_get_offsets_8bit(mpu6050_addr_t addr, uint8_t * offset){
+	
+	if(addr == MPU6050_ADDR0){
+		for(uint8_t i = 0; i < 13; i++){
+			offset[i] = (uint8_t)(addr0_offset[i/2] >> 8);
+			offset[i + 1] = (uint8_t)(addr0_offset[i/2] & 0xFF);
+		}
+	}else{
+		for(uint8_t i = 0; i < 13; i++){
+			offset[i] = addr1_offset[i/2] >> 8;
+			offset[i + 1] = addr1_offset[i/2] & 0xFF;
+		}
 	}
 }
 
