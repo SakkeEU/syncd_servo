@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include "syncd_tasks.h"
+#include "syncd_connection.h"
 #include "mpu6050.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -12,30 +14,39 @@
 
 void mpu6050_task(void * pvParameters){
 	
+	volatile int64_t time = 0;
+	uint8_t data[14] = {0};
+	esp_err_t err;
+	syncd_wifi_init();
+	syncd_espnow_init();
 	mpu6050_i2c_init();
 	mpu6050_sync_default_init(MPU6050_ADDR0);
 	
 	mpu6050_show_config(MPU6050_ADDR0);
 	vTaskDelay(3000 / portTICK_RATE_MS);
-	
-	int16_t offset[7];
+
 	mpu6050_offsets_init(MPU6050_ADDR0);
-	mpu6050_get_offsets(MPU6050_ADDR0, offset);
-	printf("AccelOffs(X Y Z): %d %d %d\n", offset[0], offset[1], offset[2]);
-	printf("GyroOffs(X Y Z): %d %d %d\n", offset[4], offset[5], offset[6]);
-	printf("tempOffs: %d\n", offset[3]);
+	mpu6050_get_offsets_8bit(MPU6050_ADDR0, data);
+	syncd_packet_t p = {p.buf = data, .len = 14};
+	syncd_packet_t * ptr_packet = &p;
+	syncd_send((void *) ptr_packet);
 	
 	for(;;){
-		int16_t data[7];
+		time = esp_timer_get_time();
+		for(uint8_t i = 0; i < 14; i++){
+			data[i] = 0;
+		}
 		
-		mpu6050_read_sensors(MPU6050_ADDR0, data, 1);
-			
-		printf("Accel(X Y Z): %d %d %d\n", data[0], data[1], data[2]);
-		printf("Gyro(X Y Z): %d %d %d\n", data[4], data[5], data[6]);
-		printf("tempRaws: %d\n", data[3]);
+		err = mpu6050_read_burst(MPU6050_ADDR0, RACCEL_XOUT_H, data, 14);
+		if(err != 0)
+			continue;
+		syncd_packet_t p = {p.buf = data, .len = 14};
+		syncd_packet_t * ptr_packet = &p;
 		
+		syncd_send((void *) ptr_packet);
 		
-		
+		time = esp_timer_get_time() - time;
+		printf("time: %ld us\n", (volatile long int)time);
 		vTaskDelay(500 / portTICK_RATE_MS);
 	}
 }
