@@ -50,8 +50,8 @@ typedef enum{
 	R_WHO_AM_I		= 0x75
 }mpu6050_reg_t;
 
-esp_err_t mpu6050_i2c_init();
-void mpu6050_i2c_deinit();
+esp_err_t mpu6050_i2c_init(void);
+void mpu6050_i2c_deinit(void);
 void mpu6050_sync_default_init(mpu6050_addr_t addr);
 
 esp_err_t mpu6050_write_byte(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data);

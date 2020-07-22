@@ -21,7 +21,7 @@ static esp_err_t wifi_handler(void *ctx, system_event_t *event){
 	}	
 	return ESP_OK;
 }
-
+//receive_cb is not needed on the sender for now
 static void receive_cb(const uint8_t * mac_addr, const uint8_t * data, int data_len){}
 static void send_cb(const uint8_t * mac_addr, esp_now_send_status_t status){
 	
@@ -53,12 +53,13 @@ void syncd_send(void * param){
 	send_result = SEND_NOT_FINISHED;
 }
 
-void syncd_espnow_init(){
+void syncd_espnow_init(void){
 	
 	ESP_ERROR_CHECK(esp_now_init());
 	ESP_ERROR_CHECK(esp_now_register_recv_cb(receive_cb));
 	ESP_ERROR_CHECK(esp_now_register_send_cb(send_cb));
 	
+	//TODO: not useful for now, maybe delete later.
 	esp_now_peer_info_t peer = {
 		.lmk			= {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		.channel		= ESPNOW_CHANNEL,
@@ -70,11 +71,11 @@ void syncd_espnow_init(){
 	ESP_ERROR_CHECK(esp_now_add_peer(&peer));
 }
 
-void syncd_espnow_deinit(){
+void syncd_espnow_deinit(void){
 	esp_now_deinit();
 }
 
-void syncd_wifi_init(){
+void syncd_wifi_init(void){
 	
 	tcpip_adapter_init();
 	ESP_ERROR_CHECK(esp_event_loop_init(wifi_handler, NULL));
@@ -88,7 +89,7 @@ void syncd_wifi_init(){
     ESP_ERROR_CHECK(esp_wifi_set_channel(ESPNOW_CHANNEL, 0));
 }
 
-void syncd_wifi_deinit(){
+void syncd_wifi_deinit(void){
 	esp_wifi_stop();
 	esp_wifi_deinit();
 }

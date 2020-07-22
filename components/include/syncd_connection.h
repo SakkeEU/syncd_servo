@@ -21,9 +21,9 @@ typedef struct{
 
 void syncd_send(void * param);
 
-void syncd_espnow_init();
-void syncd_espnow_deinit();
-void syncd_wifi_init();
-void syncd_wifi_deinit();
+void syncd_espnow_init(void);
+void syncd_espnow_deinit(void);
+void syncd_wifi_init(void);
+void syncd_wifi_deinit(void);
 
 #endif

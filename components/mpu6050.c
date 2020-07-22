@@ -10,7 +10,7 @@ static int16_t addr0_offset[7] = {0};
 static int16_t addr1_offset[7] = {0};
 
 //TODO: add parameters for customization
-esp_err_t mpu6050_i2c_init(){
+esp_err_t mpu6050_i2c_init(void){
 	
 	esp_err_t err;
 	const i2c_config_t cfg = {
@@ -32,7 +32,7 @@ esp_err_t mpu6050_i2c_init(){
 	return err;
 }
 
-void mpu6050_i2c_deinit(){
+void mpu6050_i2c_deinit(void){
 	i2c_driver_delete(I2C_NUM_0);
 }
 
@@ -213,7 +213,7 @@ void mpu6050_get_offsets(mpu6050_addr_t addr, int16_t * offset){
 	}
 }
 
-//offsets are loaded into an array as high_byte[i] low_byte[i + 1] etc.
+//offsets are loaded into an array as high_byte[i], low_byte[i + 1] etc.
 void mpu6050_get_offsets_8bit(mpu6050_addr_t addr, uint8_t * offset){
 	
 	if(addr == MPU6050_ADDR0){
