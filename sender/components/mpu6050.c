@@ -76,6 +76,24 @@ esp_err_t mpu6050_write_byte(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * d
 	
 	return err;
 }
+//write burst mode
+esp_err_t mpu6050_write_burst(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data, uint8_t data_len){
+	
+	esp_err_t err;
+	i2c_cmd_handle_t handle = i2c_cmd_link_create();
+	
+	//tell the mpu which reg is the target then write
+	i2c_master_start(handle);
+	i2c_master_write_byte(handle, WRITE(addr), ACK);
+	i2c_master_write_byte(handle, reg, ACK);
+	i2c_master_write(handle, data, data_len, ACK);
+	i2c_master_stop(handle);
+	err = i2c_master_cmd_begin(I2C_NUM_0, handle, 100 / portTICK_RATE_MS);
+	ESP_LOGD(MPU6050_TAG, "write_burst %s:%d", ((err == 0) ? "succeeded" : "failed"), err);
+	i2c_cmd_link_delete(handle);
+	
+	return err;
+}
 
 static inline esp_err_t mpu6050_write_static(mpu6050_addr_t addr, mpu6050_reg_t reg){
 	
