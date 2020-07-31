@@ -19,6 +19,18 @@ typedef enum{
 }mpu6050_addr_t;
 
 typedef enum{
+	RXA_OFFS_USRH	= 0x06,
+	RXA_OFFS_USRL	= 0x07,
+	RYA_OFFS_USRH	= 0x08,
+	RYA_OFFS_USRL	= 0x09,
+	RZA_OFFS_USRH	= 0x0A,
+	RZA_OFFS_USRL	= 0x0B,
+	RXG_OFFS_USRH	= 0x13,
+	RXG_OFFS_USRL	= 0x14,
+	RYG_OFFS_USRH	= 0x15,
+	RYG_OFFS_USRL	= 0x16,
+	RZG_OFFS_USRH	= 0x17,
+	RZG_OFFS_USRL	= 0x18,
 	RSMPLRT_DIV		= 0x19,
 	RCONFIG			= 0x1A,
 	RGYRO_CONFIG	= 0x1B,
@@ -55,6 +67,7 @@ void mpu6050_i2c_deinit(void);
 void mpu6050_sync_default_init(mpu6050_addr_t addr);
 
 esp_err_t mpu6050_write_byte(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data);
+esp_err_t mpu6050_write_burst(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data, uint8_t data_len);
 esp_err_t mpu6050_read_byte(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data);
 esp_err_t mpu6050_read_burst(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data, uint8_t data_len);
 
