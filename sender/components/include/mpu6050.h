@@ -64,17 +64,15 @@ typedef enum{
 
 esp_err_t mpu6050_i2c_init(void);
 void mpu6050_i2c_deinit(void);
-void mpu6050_sync_default_init(mpu6050_addr_t addr);
+esp_err_t mpu6050_sync_default_init(mpu6050_addr_t addr);
 
 esp_err_t mpu6050_write_byte(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data);
 esp_err_t mpu6050_write_burst(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data, uint8_t data_len);
 esp_err_t mpu6050_read_byte(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data);
 esp_err_t mpu6050_read_burst(mpu6050_addr_t addr, mpu6050_reg_t reg, uint8_t * data, uint8_t data_len);
 
-esp_err_t mpu6050_read_sensors(mpu6050_addr_t addr, int16_t * data, uint8_t with_offset);
-void mpu6050_offsets_init(mpu6050_addr_t addr);
-void mpu6050_get_offsets(mpu6050_addr_t addr, int16_t * offset);
-void mpu6050_get_offsets_8bit(mpu6050_addr_t addr, uint8_t * offset);
-void mpu6050_show_config(mpu6050_addr_t addr);
+esp_err_t mpu6050_read_sensors(mpu6050_addr_t addr, int16_t * data);
+esp_err_t mpu6050_offsets_init(mpu6050_addr_t addr);
+esp_err_t mpu6050_show_config(mpu6050_addr_t addr);
 
 #endif  
