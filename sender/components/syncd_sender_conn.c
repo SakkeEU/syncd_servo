@@ -1,5 +1,5 @@
 #include <string.h>
-#include "syncd_connection.h"
+#include "syncd_sender_conn.h"
 #include "esp_event_loop.h"
 #include "tcpip_adapter.h"
 #include "esp_wifi.h"
@@ -8,7 +8,7 @@
 
 //TODO: find better solution
 static uint8_t syncd_peer_mac[ESP_NOW_ETH_ALEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-static syncd_send_result_t send_result = SEND_NOT_FINISHED;
+static volatile syncd_send_result_t send_result = SEND_NOT_FINISHED;
 
 static esp_err_t wifi_handler(void *ctx, system_event_t *event){
 	
@@ -35,31 +35,27 @@ static void send_cb(const uint8_t * mac_addr, esp_now_send_status_t status){
 		send_result = SEND_SUCCESS;
 }
 
-void syncd_send(void * param){
-	
-	uint8_t timeout = 0;
+void syncd_sender_send(void * param){
+
 	syncd_packet_t * packet = (syncd_packet_t *) param;
 	
 	ESP_ERROR_CHECK(esp_now_send(syncd_peer_mac, packet->buf, packet->len));
-	if(send_result == SEND_NOT_FINISHED || timeout < 10){
-		vTaskDelay(3 / portTICK_RATE_MS);
-		timeout++;
-	}
+	while(send_result == SEND_NOT_FINISHED)
+		continue;
 	if(send_result == SEND_FAIL)
-		ESP_LOGI(TAG_ESPNOW, "send fail");
+		ESP_LOGD(TAG_ESPNOW, "send fail");
 	else
-		ESP_LOGI(TAG_ESPNOW, "send success");
+		ESP_LOGD(TAG_ESPNOW, "send success");
 		
 	send_result = SEND_NOT_FINISHED;
 }
 
-void syncd_espnow_init(void){
+void syncd_sender_espnow_init(void){
 	
 	ESP_ERROR_CHECK(esp_now_init());
 	ESP_ERROR_CHECK(esp_now_register_recv_cb(receive_cb));
 	ESP_ERROR_CHECK(esp_now_register_send_cb(send_cb));
 	
-	//TODO: not useful for now, maybe delete later.
 	esp_now_peer_info_t peer = {
 		.lmk			= {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		.channel		= ESPNOW_CHANNEL,
@@ -71,11 +67,11 @@ void syncd_espnow_init(void){
 	ESP_ERROR_CHECK(esp_now_add_peer(&peer));
 }
 
-void syncd_espnow_deinit(void){
+void syncd_sender_espnow_deinit(void){
 	esp_now_deinit();
 }
 
-void syncd_wifi_init(void){
+void syncd_sender_wifi_init(void){
 	
 	tcpip_adapter_init();
 	ESP_ERROR_CHECK(esp_event_loop_init(wifi_handler, NULL));
@@ -89,7 +85,7 @@ void syncd_wifi_init(void){
     ESP_ERROR_CHECK(esp_wifi_set_channel(ESPNOW_CHANNEL, 0));
 }
 
-void syncd_wifi_deinit(void){
+void syncd_sender_wifi_deinit(void){
 	esp_wifi_stop();
 	esp_wifi_deinit();
 }
