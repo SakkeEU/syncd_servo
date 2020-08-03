@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "syncd_connection.h"
 #include "mpu6050.h"
 #include "freertos/FreeRTOS.h"
@@ -18,81 +19,78 @@ static inline void check_error(esp_err_t err){
 	if(err)
 		ESP_LOGI(SENDER_MAIN_TAG,"error:%d\n", err);
 }
+static inline void float2array(float f, uint8_t * array){
+	
+	uint asint = * ((uint *)&f);
+	
+	uint8_t i;
+	for(i = 0; i < 4; i++)
+		array[i] = (asint >> (8 * i)) & 0xFF;
+}
 
 void syncd_task(void * pvParameters){
 	
-	volatile int64_t time = 0;
-	uint8_t data[14] = {0};
 	syncd_wifi_init();
 	syncd_espnow_init();
 	check_error(mpu6050_i2c_init());
 	check_error(mpu6050_sync_default_init(MPU6050_ADDR0));
 
 	check_error(mpu6050_show_config(MPU6050_ADDR0));
-	vTaskDelay(3000 / portTICK_RATE_MS);
-	
-	//check_error(mpu6050_read_burst(MPU6050_ADDR0, RXA_OFFS_USRH, data, 6));
-	//check_error(mpu6050_read_burst(MPU6050_ADDR0, RXG_OFFS_USRH, (data+6), 6));
-	
-	//int16_t a1,a2,a3,a4,a5,a6;
-	//a1 = (data[0] << 8) | data[1];
-	//a2 = (data[2] << 8) | data[3];
-	//a3 = (data[4] << 8) | data[5];
-	//a4 = (data[6] << 8) | data[7];
-	//a5 = (data[8] << 8) | data[9];
-	//a6 = (data[10] << 8) | data[11];
-	//printf("%d\n", a1);
-	//printf("%d\n", a2);
-	//printf("%d\n", a3);
-	//printf("%d\n", a4);
-	//printf("%d\n", a5);
-	//printf("%d\n", a6);
 	
 	check_error(mpu6050_offsets_init(MPU6050_ADDR0));
-
-	//check_error(mpu6050_read_burst(MPU6050_ADDR0, RXA_OFFS_USRH, data, 6));
-	//check_error(mpu6050_read_burst(MPU6050_ADDR0, RXG_OFFS_USRH, (data+6), 6));
 	
-	//a1 = (data[0] << 8) | data[1];
-	//a2 = (data[2] << 8) | data[3];
-	//a3 = (data[4] << 8) | data[5];
-	//a4 = (data[6] << 8) | data[7];
-	//a5 = (data[8] << 8) | data[9];
-	//a6 = (data[10] << 8) | data[11];
-	//printf("%d\n", a1);
-	//printf("%d\n", a2);
-	//printf("%d\n", a3);
-	//printf("%d\n", a4);
-	//printf("%d\n", a5);
-	//printf("%d\n", a6);
-	vTaskDelay(5000 / portTICK_RATE_MS);
+	volatile int64_t time_past = 0;
+	volatile int64_t time_curr = 0;
+	volatile int64_t time_delta = 0;
+	float dt = 0;
+	int16_t data[14] = {0};
+	float angle[3] = {0};
 	
+	float bias = 0.96;
+	//float accel_sens = 16384.0;
+	float gyro_sens = 131.0;
+	int s = 0;
 	esp_err_t err;
 	for(;;){
-		time = esp_timer_get_time();
-		for(uint8_t i = 0; i < 14; i++){
-			data[i] = 0;
-		}
-		
-		err = mpu6050_read_burst(MPU6050_ADDR0, RACCEL_XOUT_H, data, 14);
+		//err = mpu6050_read_burst(MPU6050_ADDR0, RACCEL_XOUT_H, data, 14);
+		err = mpu6050_read_sensors(MPU6050_ADDR0, data);
 		if(err != 0){
 			ESP_LOGI(SENDER_MAIN_TAG,"error:%d\n", err);
 			continue;
 		}
-		syncd_packet_t p = {p.buf = data, .len = 14};
-		syncd_packet_t * ptr_packet = &p;
+		time_curr = esp_timer_get_time();
+		if(time_past == 0 || time_curr < time_past){
+			time_past = time_curr;
+			continue;
+		}
 		
+		time_delta = (time_curr - time_past)/2;
+		dt = (time_delta / 1000000.0)*2;
+		angle[0] += bias * ((data[4] * dt) / gyro_sens);
+		angle[1] += bias * ((data[5] * dt) / gyro_sens);
+		angle[2] += bias * ((data[6] * dt) / gyro_sens);
+		
+		//if(!(s%30)){
+			//printf("\ndt: %f\n", dt);
+			//printf("time_delta: %ld us\n", (volatile long int)time_delta);
+			//printf("time: %ld us\n", (volatile long int)(time_curr - time_past));
+			//printf("\n****\n");
+			//printf("gx%.2f\n", angle[0]);
+			//printf("gy%.2f\n", angle[1]);
+			//printf("gz%.2f\n", angle[2]);
+		//}
+		time_past = time_curr;
+		s++;
+		
+		uint8_t send[12] = {0};
+		float2array(angle[0], send);
+		float2array(angle[1], send+4);
+		float2array(angle[2], send+8);
+		syncd_packet_t p = {p.buf = send, .len = 12};
+		syncd_packet_t * ptr_packet = &p;
 		syncd_send((void *) ptr_packet);
 		
-		//printf("%d\n", (int16_t)((data[0] << 8) | data[1]));
-		//printf("%d\n", (int16_t)((data[2] << 8) | data[3]));
-		//printf("%d\n", (int16_t)((data[4] << 8) | data[5]));
-		//printf("%d\n", (int16_t)((data[8] << 8) | data[9]));
-		//printf("%d\n", (int16_t)((data[10] << 8) | data[11]));
-		//printf("%d\n", (int16_t)((data[12] << 8) | data[13]));
-		time = esp_timer_get_time() - time;
-		printf("time: %ld us\n", (volatile long int)time);
-		vTaskDelay(500 / portTICK_RATE_MS);
+		vTaskDelay(20 / portTICK_RATE_MS);
 	}
 }
 
