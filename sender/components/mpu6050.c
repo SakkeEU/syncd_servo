@@ -51,6 +51,12 @@ esp_err_t mpu6050_sync_default_init(mpu6050_addr_t addr){
 	if(err)
 		return err;
 	vTaskDelay(100 / portTICK_RATE_MS);
+	
+	reg_value = 0x00; //set gyro sensitivity
+	err = mpu6050_write_byte(addr, RGYRO_CONFIG, &reg_value);
+	if(err)
+		return err;
+	vTaskDelay(20 / portTICK_RATE_MS);
 		
 	reg_value = 0x01; //set sample rate divider
 	err = mpu6050_write_byte(addr, RSMPLRT_DIV, &reg_value);
@@ -58,7 +64,7 @@ esp_err_t mpu6050_sync_default_init(mpu6050_addr_t addr){
 		return err;
 	vTaskDelay(20 / portTICK_RATE_MS);
 	
-	reg_value = 0x01; //set Digital low Pass Filter
+	reg_value = 0x03; //set Digital low Pass Filter
 	err = mpu6050_write_byte(addr, RCONFIG, &reg_value);
 	vTaskDelay(200 / portTICK_RATE_MS);
 	
