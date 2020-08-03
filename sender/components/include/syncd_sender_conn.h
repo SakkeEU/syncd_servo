@@ -1,5 +1,5 @@
-#ifndef _SYNCD_CONNECTION_
-#define _SYNCD_CONNECTION_
+#ifndef _SYNCD_SENDER_CONN_
+#define _SYNCD_SENDER_CONN_
 
 #include <stdint.h>
 
@@ -21,9 +21,9 @@ typedef struct{
 
 void syncd_send(void * param);
 
-void syncd_espnow_init(void);
-void syncd_espnow_deinit(void);
-void syncd_wifi_init(void);
-void syncd_wifi_deinit(void);
+void syncd_sender_espnow_init(void);
+void syncd_sender_espnow_deinit(void);
+void syncd_sender_wifi_init(void);
+void syncd_sender_wifi_deinit(void);
 
 #endif

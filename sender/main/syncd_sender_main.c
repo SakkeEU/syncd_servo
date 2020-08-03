@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include "syncd_connection.h"
+#include "syncd_sender_conn.h"
 #include "mpu6050.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -30,8 +30,8 @@ static inline void float2array(float f, uint8_t * array){
 
 void syncd_task(void * pvParameters){
 	
-	syncd_wifi_init();
-	syncd_espnow_init();
+	syncd_sender_wifi_init();
+	syncd_sender_espnow_init();
 	check_error(mpu6050_i2c_init());
 	check_error(mpu6050_sync_default_init(MPU6050_ADDR0));
 
