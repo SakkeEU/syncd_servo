@@ -19,14 +19,6 @@ static inline void check_error(esp_err_t err){
 	if(err)
 		ESP_LOGI(SENDER_MAIN_TAG,"error:%d\n", err);
 }
-static inline void float2array(float f, uint8_t * array){
-	
-	uint asint = * ((uint *)&f);
-	
-	uint8_t i;
-	for(i = 0; i < 4; i++)
-		array[i] = (asint >> (8 * i)) & 0xFF;
-}
 
 void syncd_task(void * pvParameters){
 	
@@ -41,19 +33,12 @@ void syncd_task(void * pvParameters){
 	
 	volatile int64_t time_past = 0;
 	volatile int64_t time_curr = 0;
-	volatile int64_t time_delta = 0;
-	float dt = 0;
-	int16_t data[14] = {0};
-	float angle[3] = {0};
+	volatile uint16_t time_delta = 0;
+	uint8_t data[16] = {0};
 	
-	float bias = 0.96;
-	//float accel_sens = 16384.0;
-	float gyro_sens = 131.0;
-	int s = 0;
 	esp_err_t err;
 	for(;;){
-		//err = mpu6050_read_burst(MPU6050_ADDR0, RACCEL_XOUT_H, data, 14);
-		err = mpu6050_read_sensors(MPU6050_ADDR0, data);
+		err = mpu6050_read_burst(MPU6050_ADDR0, RACCEL_XOUT_H, data, 14);
 		if(err != 0){
 			ESP_LOGI(SENDER_MAIN_TAG,"error:%d\n", err);
 			continue;
@@ -63,32 +48,15 @@ void syncd_task(void * pvParameters){
 			time_past = time_curr;
 			continue;
 		}
-		
-		time_delta = (time_curr - time_past)/2;
-		dt = (time_delta / 1000000.0)*2;
-		angle[0] += bias * ((data[4] * dt) / gyro_sens);
-		angle[1] += bias * ((data[5] * dt) / gyro_sens);
-		angle[2] += bias * ((data[6] * dt) / gyro_sens);
-		
-		//if(!(s%30)){
-			//printf("\ndt: %f\n", dt);
-			//printf("time_delta: %ld us\n", (volatile long int)time_delta);
-			//printf("time: %ld us\n", (volatile long int)(time_curr - time_past));
-			//printf("\n****\n");
-			//printf("gx%.2f\n", angle[0]);
-			//printf("gy%.2f\n", angle[1]);
-			//printf("gz%.2f\n", angle[2]);
-		//}
+
+		time_delta = (uint16_t)(time_curr - time_past);
 		time_past = time_curr;
-		s++;
-		
-		uint8_t send[12] = {0};
-		float2array(angle[0], send);
-		float2array(angle[1], send+4);
-		float2array(angle[2], send+8);
-		syncd_packet_t p = {p.buf = send, .len = 12};
+		data[14] = (time_delta >> 8) & 0xFF;
+		data[15] = time_delta & 0xFF;
+
+		syncd_packet_t p = {p.buf = data, .len = 16};
 		syncd_packet_t * ptr_packet = &p;
-		syncd_send((void *) ptr_packet);
+		syncd_sender_send((void *) ptr_packet);
 		
 		vTaskDelay(20 / portTICK_RATE_MS);
 	}

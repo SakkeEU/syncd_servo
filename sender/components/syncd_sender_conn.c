@@ -43,9 +43,9 @@ void syncd_sender_send(void * param){
 	while(send_result == SEND_NOT_FINISHED)
 		continue;
 	if(send_result == SEND_FAIL)
-		ESP_LOGD(TAG_ESPNOW, "send fail");
+		ESP_LOGI(TAG_ESPNOW, "send fail");
 	else
-		ESP_LOGD(TAG_ESPNOW, "send success");
+		ESP_LOGI(TAG_ESPNOW, "send success");
 		
 	send_result = SEND_NOT_FINISHED;
 }
