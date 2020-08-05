@@ -19,7 +19,7 @@ typedef struct{
 	uint8_t len;
 }syncd_packet_t;
 
-void syncd_send(void * param);
+void syncd_sender_send(void * param);
 
 void syncd_sender_espnow_init(void);
 void syncd_sender_espnow_deinit(void);
