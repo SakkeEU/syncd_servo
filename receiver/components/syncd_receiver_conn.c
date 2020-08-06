@@ -6,6 +6,7 @@
 #include "esp_now.h"
 #include "esp_log.h"
 
+//received packet
 static syncd_packet_t packet = {.buf = NULL, .len = 0};
 
 static esp_err_t wifi_handler(void *ctx, system_event_t *event){
@@ -20,6 +21,7 @@ static esp_err_t wifi_handler(void *ctx, system_event_t *event){
 	return ESP_OK;
 }
 
+//sending not needed for now
 static void send_cb(const uint8_t * mac_addr, esp_now_send_status_t status){}
 static void receive_cb(const uint8_t * mac_addr, const uint8_t * data, int data_len){
 	
@@ -36,10 +38,12 @@ static void receive_cb(const uint8_t * mac_addr, const uint8_t * data, int data_
     memcpy(packet.buf, data, data_len);
     packet.len = data_len;
   
+	//give semaphore to unblock main task
 	ESP_LOGD(TAG_ESPNOW, "new packet arrived\n");
 	xSemaphoreGive(sem);
 }
 
+//prepare the received packet to be returned
 syncd_packet_t syncd_receiver_receive(void){
 		
 	syncd_packet_t ret;
@@ -75,7 +79,7 @@ void syncd_receiver_wifi_init(void){
 	
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH)); //TODO: test ram storage for better performance
+	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
     
