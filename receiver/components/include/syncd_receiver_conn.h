@@ -2,6 +2,9 @@
 #define _SYNCD_RECEIVER_CONN_
 
 #include <stdint.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
 
 #define TAG_WIFI "SYNCD_WIFI"
 #define TAG_ESPNOW "SYNCD_ESPNOW"
@@ -17,6 +20,8 @@ typedef struct{
 	uint8_t * buf;
 	uint8_t len;
 }syncd_packet_t;
+
+extern SemaphoreHandle_t sem;
 
 syncd_packet_t syncd_receiver_receive(void);
 

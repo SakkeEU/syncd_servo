@@ -7,7 +7,6 @@
 #include "esp_log.h"
 
 static syncd_packet_t packet = {.buf = NULL, .len = 0};
-static syncd_receiver_receive_result_t receive_result = NO_NEW_PACKET;
 
 static esp_err_t wifi_handler(void *ctx, system_event_t *event){
 	
@@ -24,9 +23,6 @@ static esp_err_t wifi_handler(void *ctx, system_event_t *event){
 static void send_cb(const uint8_t * mac_addr, esp_now_send_status_t status){}
 static void receive_cb(const uint8_t * mac_addr, const uint8_t * data, int data_len){
 	
-	if(receive_result == NEW_PACKET)
-		return;
-	
 	if(mac_addr == NULL){
 		ESP_LOGE(TAG_ESPNOW, "NULL mac address in receive callback");
 		return;
@@ -40,14 +36,11 @@ static void receive_cb(const uint8_t * mac_addr, const uint8_t * data, int data_
     memcpy(packet.buf, data, data_len);
     packet.len = data_len;
   
-    receive_result = NEW_PACKET;
-	
+	ESP_LOGD(TAG_ESPNOW, "new packet arrived\n");
+	xSemaphoreGive(sem);
 }
 
 syncd_packet_t syncd_receiver_receive(void){
-	
-	while(receive_result == NO_NEW_PACKET)
-		vTaskDelay(1);
 		
 	syncd_packet_t ret;
 	ret.buf = malloc(packet.len);
@@ -60,7 +53,6 @@ syncd_packet_t syncd_receiver_receive(void){
 
 	free(packet.buf);
 	packet.len = 0;
-	receive_result = NO_NEW_PACKET;
 	return ret;
 }
 
