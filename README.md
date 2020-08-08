@@ -6,21 +6,33 @@ I went into this project full aware of its limitations, the most important being
 ## List of components
 
 #### Sender:
-- esp8266-01
-- mpu6050 attitude sensor
+- ESP8266-01
+- MPU6050 attitude sensor
 - 2x 4.7k ohm pull-up resistors
 #### Receiver:
-- esp8266-01
-- sg90 servo motor
+- ESP8266-01
+- SG90 servo motor
 - breadboard power module
 
-## Details
+## Small Description
 
-For the communication between the two micro-controllers the espnow protocol was chosen for primarly two reasons: First, the small amount of data that needed to be sent and received each time and second the un-centralized nature of the project.
-Both the esps uses the esp-rtos and no external mpu6050 related library has been used to communicate with the mpu6050, it was also chosen not to use the MPU DMP, the math involved in the project was coded by hand.
+For the communication between the two micro-controllers the ESPNOW protocol was chosen mainly for two reasons: First, the small amount of data that needed to be sent and received each time and second the uncentralized nature of the project.
+This project was developed using the ESP RTOS SDK and no external MPU6050 related library was used to communicate with the MPU6050, it was also chosen not to use the MPU DMP and instead compute the necessary data directly in the code.
+
+## Usage and Requirements
+
+This project requires the [ESP RTOS v3.3].  
+Get the proper [Toolchain], the [ESP RTOS] and set up the [Path] for the toolchain.  
+Use `make app` to compile the code and `make app flash` to flash it into the ESP-01.
 
 ## Sender Schematics
 ![Sender Schematics](SYNCDSENDER.png)
 
 ## Receiver Schematics
 ![Receiver Schematics](SYNCDRECEIVER.png)
+
+[ESP RTOS v3.3]: <https://github.com/espressif/ESP8266_RTOS_SDK/tree/release/v3.3#get-toolchain>
+[Toolchain]: <https://github.com/espressif/ESP8266_RTOS_SDK/tree/release/v3.3#get-toolchain>
+[ESP RTOS]: <https://github.com/espressif/ESP8266_RTOS_SDK/tree/release/v3.3#get-esp8266_rtos_sdk>
+[Path]: <https://github.com/espressif/ESP8266_RTOS_SDK/tree/release/v3.3#setup-path-to-esp8266_rtos_sdk>
+
