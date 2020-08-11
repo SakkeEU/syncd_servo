@@ -58,7 +58,7 @@ void syncd_task(void * pvParameters){
 		syncd_packet_t * ptr_packet = &p;
 		syncd_sender_send((void *) ptr_packet);
 		
-		vTaskDelay(20 / portTICK_RATE_MS);
+		vTaskDelay(40 / portTICK_RATE_MS);
 	}
 }
 
