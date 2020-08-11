@@ -1,3 +1,4 @@
+#include <math.h>
 #include "syncd_receiver_conn.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -46,7 +47,7 @@ void syncd_receiver_task(void * pvParam){
 	xSemaphoreTake(sem, 1);
 	
 	uint32_t s = 0;
-	float angle[3] = {0};
+	float gyro_angle[3] = {0};
 	syncd_packet_t packet;
 	for(;;){
 		while(xSemaphoreTake(sem, 2000 / portTICK_RATE_MS) == pdFALSE){
@@ -59,39 +60,74 @@ void syncd_receiver_task(void * pvParam){
 			continue;
 		
 		int16_t gyro_sens = 131;
+		int16_t accel_sens = 32768/2;
 		
-		int16_t gyro[3] = {0};
 		uint16_t delta_t = 0;
-		//int16_t accel[3] = {0};
-		//accel[0] = packet.buf[0] << 8 | packet.buf[1];
-		//accel[1] = packet.buf[2] << 8 | packet.buf[3];
-		//accel[2] = packet.buf[4] << 8 | packet.buf[5];
+		int16_t gyro[3] = {0};
+		int16_t accel[3] = {0};
+		accel[0] = packet.buf[0] << 8 | packet.buf[1];
+		accel[1] = packet.buf[2] << 8 | packet.buf[3];
+		accel[2] = packet.buf[4] << 8 | packet.buf[5];
 		gyro[0] = packet.buf[8] << 8 | packet.buf[9];
 		gyro[1] = packet.buf[10] << 8 | packet.buf[11];
 		gyro[2] = packet.buf[12] << 8 | packet.buf[13];
 		delta_t = packet.buf[14] << 8 | packet.buf[15];
 		free(packet.buf);
 		
+		float accel_f[3] = {
+			(float)accel[0]/(float)accel_sens,
+			(float)accel[1]/(float)accel_sens,
+			(float)accel[2]/(float)accel_sens
+		};
+		float accel_abs_sum = fabsf(accel_f[0]) + fabsf(accel_f[1]) + fabsf(accel_f[2]);
+		float accel_norm = sqrtf(powf(accel_f[0], 2) + powf(accel_f[1], 2) + powf(accel_f[2], 2));
+		float accel_angle[3] = {0};
+		
+		float abs_sum_min = 1.2;
+		float abs_sum_max = 1.6;
+		if(accel_abs_sum > abs_sum_min && accel_abs_sum < abs_sum_max){
+			accel_angle[0] = atan2f(-accel_f[0], sqrtf(powf(accel_f[1], 2) + powf(accel_f[2], 2))) * 57.3; //180/3.14159 
+			accel_angle[1] = atan2f(accel_f[1], accel_f[2]) * 57.3;
+		}
+		
 		float dt = ((float)(delta_t))/1000000;
 		float bias = 0.96;
 		
-		angle[0] += bias * (((float)gyro[0] * dt) / (float)gyro_sens);
-		angle[1] += bias * (((float)gyro[1] * dt) / (float)gyro_sens);
-		angle[2] += bias * (((float)gyro[2] * dt) / (float)gyro_sens);
+		//Two of these are useless for now
+		gyro_angle[0] += (((float)gyro[0] * dt) / (float)gyro_sens);
+		gyro_angle[1] += (((float)gyro[1] * dt) / (float)gyro_sens);
+		gyro_angle[2] += (((float)gyro[2] * dt) / (float)gyro_sens);
+		
+		//if the angle is not close to 0 or 90° and we are not moving
+		//accel_angle is more precise than gyro_angle
+		float angle = 0;
+		if(accel_abs_sum > abs_sum_min && accel_abs_sum < abs_sum_max)
+			angle = (1.0 - bias) * gyro_angle[1] + bias * accel_angle[0];
+		else
+			angle = bias * gyro_angle[1] + (1.0 - bias) * accel_angle[0];
+			
+		//very simple anti drift solution
+		if(accel_abs_sum - accel_f[2] < 0.1){
+			gyro_angle[0] = bias * gyro_angle[0];
+			gyro_angle[1] = bias * gyro_angle[1];
+			gyro_angle[2] = bias * gyro_angle[2];
+		}
 		
 		//experimental value to offset the loss of angle precision
-		float angle2duty = 1500/90;
-		int16_t duty = 1500 + (int16_t)(angle[2] * angle2duty);
+		float angle2duty = 1000/90;
+		int16_t duty = 1500 + (int16_t)(angle * angle2duty);
 		
 		pwm_set_duty(0, duty);
 		pwm_start();
-		vTaskDelay(40 / portTICK_RATE_MS);
+		vTaskDelay(30 / portTICK_RATE_MS);
 		pwm_stop(0);
-		if(!(s%3)){
-			printf("duty:%d\n", duty);
-			printf("alpha:%.2f\n", angle[0]);
-			printf("beta:%.2f\n", angle[1]);
-			printf("gamma:%.2f\n", angle[2]);
+		
+		if(!(s%10)){
+			printf("accel_abs_sum:%.2f\n", accel_abs_sum);
+			printf("accel_norm:%.2f\n", accel_norm);
+			printf("accel_angle[0]:%.2f\n", accel_angle[0]);
+			printf("gyro_angle[1]:%.2f\n", gyro_angle[1]);
+			printf("angle:%.2f\n", angle);
 			printf("***\n");
 		}
 		s++;
